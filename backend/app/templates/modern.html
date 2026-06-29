@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', 'Segoe UI', sans-serif; font-size: 10.5pt; color: #1e293b; line-height: 1.5; }
+.page { width: 210mm; min-height: 297mm; padding: 18mm 20mm; }
+.header { text-align: center; padding-bottom: 12px; border-bottom: 2px solid #6366f1; margin-bottom: 14px; }
+.header h1 { font-size: 22pt; font-weight: 700; color: #0f172a; letter-spacing: -0.5px; }
+.header .contact { font-size: 9pt; color: #64748b; margin-top: 6px; }
+.header .contact span { display: inline-block; margin: 0 6px; }
+.summary { font-size: 9.5pt; color: #475569; line-height: 1.6; margin-bottom: 14px; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto; }
+.section { margin-bottom: 16px; }
+.section-title { font-size: 11pt; font-weight: 700; color: #6366f1; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+.item { margin-bottom: 12px; }
+.item-header { display: flex; justify-content: space-between; align-items: baseline; }
+.item-title { font-size: 10.5pt; font-weight: 600; color: #0f172a; }
+.item-sub { font-size: 9.5pt; color: #6366f1; font-weight: 500; }
+.item-date { font-size: 8.5pt; color: #94a3b8; white-space: nowrap; }
+.item-desc { font-size: 9pt; color: #475569; margin-top: 4px; }
+.skills-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.skill-tag { background: #eef2ff; color: #4338ca; padding: 3px 10px; border-radius: 4px; font-size: 8.5pt; font-weight: 500; }
+.project-item { margin-bottom: 10px; }
+.project-item .item-title { color: #6366f1; }
+.lang-list { display: flex; gap: 16px; flex-wrap: wrap; }
+.lang-list span { font-size: 9pt; color: #475569; }
+.lang-list strong { color: #0f172a; }
+</style>
+</head>
+<body>
+<div class="page">
+  {% if personal_info %}
+  <div class="header">
+    <h1>{{ personal_info.full_name or '' }}</h1>
+    <div class="contact">
+      {% if personal_info.email %}<span>{{ personal_info.email }}</span>{% endif %}
+      {% if personal_info.phone %}<span>{{ personal_info.phone }}</span>{% endif %}
+      {% if personal_info.city %}<span>{{ personal_info.city }}</span>{% endif %}
+      {% if personal_info.linkedin %}<span>{{ personal_info.linkedin }}</span>{% endif %}
+      {% if personal_info.github %}<span>{{ personal_info.github }}</span>{% endif %}
+    </div>
+    {% if personal_info.summary %}
+    <div class="summary">{{ personal_info.summary }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if work_experience and work_experience.items %}
+  <div class="section">
+    <div class="section-title">Tajriba</div>
+    {% for exp in work_experience.items %}
+    <div class="item">
+      <div class="item-header">
+        <div>
+          <div class="item-title">{{ exp.position }}</div>
+          <div class="item-sub">{{ exp.company }}</div>
+        </div>
+        <div class="item-date">{{ exp.start_date }} — {% if exp.is_current %}Hozir{% else %}{{ exp.end_date }}{% endif %}</div>
+      </div>
+      {% if exp.description %}<div class="item-desc">{{ exp.description }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if education and education.items %}
+  <div class="section">
+    <div class="section-title">Ta'lim</div>
+    {% for edu in education.items %}
+    <div class="item">
+      <div class="item-header">
+        <div>
+          <div class="item-title">{{ edu.university }}</div>
+          <div class="item-sub">{{ edu.degree }}{% if edu.field %}, {{ edu.field }}{% endif %}</div>
+        </div>
+        <div class="item-date">{{ edu.start_year }} — {{ edu.end_year }}</div>
+      </div>
+      {% if edu.gpa %}<div class="item-desc">GPA: {{ edu.gpa }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if skills %}
+  <div class="section">
+    <div class="section-title">Ko'nikmalar</div>
+    {% if skills.technical %}
+    <div class="skills-grid">
+      {% for skill in skills.technical %}<span class="skill-tag">{{ skill }}</span>{% endfor %}
+    </div>
+    {% endif %}
+    {% if skills.languages %}
+    <div style="margin-top:8px">
+      <div style="font-size:9pt;font-weight:600;color:#0f172a;margin-bottom:4px">Tillar</div>
+      <div class="lang-list">
+        {% for lang in skills.languages %}<span><strong>{{ lang.language }}</strong> {{ lang.level }}</span>{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if skills.soft %}
+    <div style="margin-top:8px">
+      <div style="font-size:9pt;font-weight:600;color:#0f172a;margin-bottom:4px">Soft Skills</div>
+      <div class="skills-grid">
+        {% for s in skills.soft %}<span class="skill-tag" style="background:#f1f5f9;color:#475569">{{ s }}</span>{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if projects and projects.items %}
+  <div class="section">
+    <div class="section-title">Loyihalar</div>
+    {% for proj in projects.items %}
+    <div class="project-item">
+      <div class="item-title">{{ proj.name }}</div>
+      {% if proj.description %}<div class="item-desc">{{ proj.description }}</div>{% endif %}
+      {% if proj.technologies %}
+      <div class="skills-grid" style="margin-top:4px">
+        {% for t in proj.technologies %}<span class="skill-tag">{{ t }}</span>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if certifications and certifications.items %}
+  <div class="section">
+    <div class="section-title">Sertifikatlar</div>
+    {% for cert in certifications.items %}
+    <div class="item">
+      <div class="item-title" style="font-size:9.5pt">{{ cert.name }}</div>
+      <div class="item-sub" style="font-size:8.5pt">{{ cert.issuer }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>

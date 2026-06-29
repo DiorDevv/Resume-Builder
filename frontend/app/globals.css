@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-primary text-[#F8FAFC] font-body antialiased;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-surface/80 backdrop-blur-[12px] border border-border;
+  }
+
+  .glass-hover {
+    @apply glass hover:bg-surface hover:border-accent/30 transition-all duration-300;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-accent to-accent-glow;
+  }
+
+  .text-gradient-hero {
+    @apply bg-clip-text text-transparent bg-gradient-to-b from-[#F8FAFC] to-[#94A3B8];
+  }
+
+  .glow {
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.15);
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 60px rgba(99, 102, 241, 0.25);
+  }
+
+  .animate-in {
+    animation: fadeInUp 0.6s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-in-delay-1 {
+    animation-delay: 0.1s;
+  }
+
+  .animate-in-delay-2 {
+    animation-delay: 0.2s;
+  }
+
+  .animate-in-delay-3 {
+    animation-delay: 0.3s;
+  }
+
+  .perspective-[1000px] {
+    perspective: 1000px;
+  }
+
+  .animate-gradient {
+    background-size: 200% auto;
+    animation: gradientShift 3s ease infinite;
+  }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+  100% { background-position: 0% center; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0F;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1E1E2E;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6366F1;
+}
