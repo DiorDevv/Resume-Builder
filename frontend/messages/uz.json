@@ -151,6 +151,22 @@
     "confirm": "O'chirish",
     "statusCompleted": "Tayyor",
     "statusDraft": "Davom etmoqda",
-    "createFirst": "CV yaratish"
+    "createFirst": "CV yaratish",
+    "statsTotal": "Jami CV",
+    "statsAts": "O'rtacha ATS",
+    "statsCompleted": "Tayyor",
+    "statsDrafts": "Davom etmoqda",
+    "searchPlaceholder": "CV nomi bo'yicha qidirish...",
+    "filterAll": "Barchasi",
+    "filterCompleted": "Tayyor",
+    "filterDraft": "Davom etmoqda",
+    "sortNewest": "Eng yangi",
+    "sortOldest": "Eng eski",
+    "sortAts": "Eng yaxshi ATS",
+    "sortAZ": "A-Z",
+    "bulkDelete": "Tanlanganlarni o'chirish",
+    "bulkExport": "Tanlanganlarni eksport qilish",
+    "selected": "ta tanlandi",
+    "atsLabel": "ATS"
   }
 }

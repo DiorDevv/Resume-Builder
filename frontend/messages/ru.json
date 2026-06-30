@@ -151,6 +151,22 @@
     "confirm": "Удалить",
     "statusCompleted": "Готово",
     "statusDraft": "В процессе",
-    "createFirst": "Создать CV"
+    "createFirst": "Создать CV",
+    "statsTotal": "Всего CV",
+    "statsAts": "Средний ATS",
+    "statsCompleted": "Готово",
+    "statsDrafts": "В процессе",
+    "searchPlaceholder": "Поиск по названию CV...",
+    "filterAll": "Все",
+    "filterCompleted": "Готово",
+    "filterDraft": "В процессе",
+    "sortNewest": "Новые",
+    "sortOldest": "Старые",
+    "sortAts": "Лучший ATS",
+    "sortAZ": "А-Я",
+    "bulkDelete": "Удалить выбранные",
+    "bulkExport": "Экспорт выбранных",
+    "selected": "выбрано",
+    "atsLabel": "ATS"
   }
 }

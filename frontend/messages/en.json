@@ -151,6 +151,22 @@
     "confirm": "Delete",
     "statusCompleted": "Ready",
     "statusDraft": "In progress",
-    "createFirst": "Create CV"
+    "createFirst": "Create CV",
+    "statsTotal": "Total CVs",
+    "statsAts": "Avg ATS",
+    "statsCompleted": "Completed",
+    "statsDrafts": "In Progress",
+    "searchPlaceholder": "Search by CV name...",
+    "filterAll": "All",
+    "filterCompleted": "Completed",
+    "filterDraft": "In Progress",
+    "sortNewest": "Newest",
+    "sortOldest": "Oldest",
+    "sortAts": "Best ATS",
+    "sortAZ": "A-Z",
+    "bulkDelete": "Delete selected",
+    "bulkExport": "Export selected",
+    "selected": "selected",
+    "atsLabel": "ATS"
   }
 }
