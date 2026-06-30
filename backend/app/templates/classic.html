@@ -131,10 +131,11 @@ body {
     </div>
     {% endif %}
 
-    {% if certifications and certifications.items %}
+    {% set certs = certifications.get("items") if certifications else [] %}
+    {% if certs %}
     <div>
       <div class="section-title">Sertifikatlar</div>
-      {% for cert in certifications.items %}
+      {% for cert in certs %}
       <div class="cert-item">
         <div class="cert-name">{{ cert.name }}</div>
         {% if cert.issuer %}<div class="cert-issuer">{{ cert.issuer }}</div>{% endif %}
@@ -143,10 +144,11 @@ body {
     </div>
     {% endif %}
 
-    {% if languages_section and languages_section.items %}
+    {% set langs = languages_section.get("items") if languages_section else [] %}
+    {% if langs %}
     <div>
       <div class="section-title">Tillar</div>
-      {% for lang in languages_section.items %}
+      {% for lang in langs %}
       <div class="lang-item"><strong>{{ lang.language }}</strong> — {{ lang.level }}</div>
       {% endfor %}
     </div>
@@ -161,10 +163,11 @@ body {
     </div>
     {% endif %}
 
-    {% if work_experience and work_experience.items %}
+    {% set work = work_experience.get("items") if work_experience else [] %}
+    {% if work %}
     <div class="section">
       <div class="section-title">Ish Tajribasi</div>
-      {% for exp in work_experience.items %}
+      {% for exp in work %}
       <div class="item">
         <div class="item-header">
           <div>
@@ -179,10 +182,11 @@ body {
     </div>
     {% endif %}
 
-    {% if education and education.items %}
+    {% set edu_items = education.get("items") if education else [] %}
+    {% if edu_items %}
     <div class="section">
       <div class="section-title">Ta'lim</div>
-      {% for edu in education.items %}
+      {% for edu in edu_items %}
       <div class="item">
         <div class="item-header">
           <div>
@@ -197,10 +201,11 @@ body {
     </div>
     {% endif %}
 
-    {% if projects and projects.items %}
+    {% set proj_items = projects.get("items") if projects else [] %}
+    {% if proj_items %}
     <div class="section">
       <div class="section-title">Loyihalar</div>
-      {% for proj in projects.items %}
+      {% for proj in proj_items %}
       <div class="item">
         <div class="item-title">{{ proj.name or '' }}</div>
         {% if proj.description %}<div class="item-desc">{{ proj.description }}</div>{% endif %}

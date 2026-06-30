@@ -68,25 +68,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (initRef.current) return;
     initRef.current = true;
 
-    if (!auth.isAuthenticated()) {
-      setLoading(false);
-      return;
-    }
-
-    auth
-      .me()
-      .then((userData) => {
+    const checkSession = async () => {
+      try {
+        const userData = await auth.me();
         if (mountedRef.current) {
           setUser(userData);
           startSessionTimeout();
         }
-      })
-      .catch((err: unknown) => {
-        console.warn("Session check failed (token may be expired):", err);
-      })
-      .finally(() => {
+      } catch {
+        // Not authenticated — that's OK
+      } finally {
         if (mountedRef.current) setLoading(false);
-      });
+      }
+    };
+
+    checkSession();
   }, [startSessionTimeout]);
 
   const resetSession = useCallback(() => {

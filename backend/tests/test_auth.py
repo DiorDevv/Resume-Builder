@@ -1,5 +1,19 @@
+from http.cookies import SimpleCookie
+
 import pytest
 from httpx import AsyncClient
+
+CSRF_HEADERS = {"X-Requested-With": "XMLHttpRequest"}
+
+
+def _parse_cookies(response) -> dict:
+    c = SimpleCookie()
+    for set_cookie in response.headers.get_list("set-cookie"):
+        c.load(set_cookie)
+    return {
+        "access_token": c.get("access_token").value if c.get("access_token") else None,
+        "refresh_token": c.get("refresh_token").value if c.get("refresh_token") else None,
+    }
 
 
 class TestAuth:
@@ -39,8 +53,9 @@ class TestAuth:
             "password": "TestPass123",
         })
         assert response.status_code == 200
-        assert "access_token" in response.cookies
-        assert "refresh_token" in response.cookies
+        cookies = _parse_cookies(response)
+        assert cookies["access_token"] is not None
+        assert cookies["refresh_token"] is not None
 
     async def test_login_invalid(self, client: AsyncClient):
         response = await client.post("/api/v1/auth/login", json={
@@ -59,9 +74,10 @@ class TestAuth:
         assert response.status_code == 401
 
     async def test_refresh(self, client: AsyncClient, auth_cookies: dict):
-        response = await client.post("/api/v1/auth/refresh", cookies=auth_cookies)
+        response = await client.post("/api/v1/auth/refresh", cookies=auth_cookies, headers=CSRF_HEADERS)
         assert response.status_code == 200
-        assert "access_token" in response.cookies
+        cookies = _parse_cookies(response)
+        assert cookies["access_token"] is not None
 
 
 class TestHealth:

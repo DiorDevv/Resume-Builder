@@ -98,14 +98,26 @@ def calculate_score(data: dict) -> dict:
         score -= 5
         issues.append({"type": "error", "message": "Sanalar to'liq emas"})
 
-    raw = str(data)
-    if "<table" in raw.lower():
-        score -= 5
-        issues.append({"type": "error", "message": "Jadval ishlatilgan"})
+    def _string_values(d):
+        for v in d.values():
+            if isinstance(v, str):
+                yield v
+            elif isinstance(v, dict):
+                yield from _string_values(v)
+            elif isinstance(v, list):
+                for item in v:
+                    if isinstance(item, str):
+                        yield item
+                    elif isinstance(item, dict):
+                        yield from _string_values(item)
 
-    if any(c in raw for c in "<>{}"):
-        score -= 5
-        issues.append({"type": "error", "message": "Mos kelmaydigan belgilar"})
+    for val in _string_values(data):
+        if "<table" in val.lower():
+            score -= 5
+            issues.append({"type": "error", "message": "Jadval ishlatilgan"})
+        if any(c in val for c in "<>{}"):
+            score -= 5
+            issues.append({"type": "error", "message": "Mos kelmaydigan belgilar"})
 
     score = max(0, min(100, score))
 

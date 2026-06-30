@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
+CSRF_HEADERS = {"X-Requested-With": "XMLHttpRequest"}
+
 
 class TestATSCheck:
     async def test_check_complete_data(self, client: AsyncClient):
@@ -64,7 +66,11 @@ class TestATSCheck:
 
 class TestATSScore:
     async def test_get_score(self, client: AsyncClient, auth_cookies: dict):
-        create = await client.post("/api/v1/resumes", json={"title": "ATS Test"}, cookies=auth_cookies)
+        create = await client.post(
+            "/api/v1/resumes", json={"title": "ATS Test"},
+            cookies=auth_cookies, headers=CSRF_HEADERS,
+        )
+        assert create.status_code == 201, f"Create resume failed: {create.text}"
         rid = create.json()["id"]
 
         response = await client.get(f"/api/v1/ats/score/{rid}", cookies=auth_cookies)
@@ -75,6 +81,6 @@ class TestATSScore:
         response = await client.get("/api/v1/ats/score/00000000-0000-0000-0000-000000000000")
         assert response.status_code == 401
 
-    async def test_get_score_invalid_uuid(self, client: AsyncClient):
-        response = await client.get("/api/v1/ats/score/not-a-uuid")
+    async def test_get_score_invalid_uuid(self, client: AsyncClient, auth_cookies: dict):
+        response = await client.get("/api/v1/ats/score/not-a-uuid", cookies=auth_cookies)
         assert response.status_code == 422

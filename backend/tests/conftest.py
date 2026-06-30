@@ -1,8 +1,7 @@
-import asyncio
 import uuid
+from http.cookies import SimpleCookie
 from typing import AsyncGenerator
 
-import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -13,32 +12,29 @@ from app.main import app
 from app.core.security import hash_password
 from app.models.user import User
 
+settings.RATE_LIMIT_ENABLED = False
+
 TEST_DATABASE_URL = settings.DATABASE_URL + "_test"
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest_asyncio.fixture(scope="session")
-async def engine():
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+@pytest_asyncio.fixture
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False, pool_pre_ping=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    yield engine
+
+    connection = await engine.connect()
+    transaction = await connection.begin()
+    session = AsyncSession(bind=connection, expire_on_commit=False)
+
+    yield session
+
+    await session.close()
+    await transaction.rollback()
+    await connection.close()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
-
-
-@pytest_asyncio.fixture
-async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
-    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with session_factory() as session:
-        yield session
 
 
 @pytest_asyncio.fixture
@@ -67,11 +63,21 @@ async def test_user(db_session: AsyncSession) -> User:
     return user
 
 
+def _parse_set_cookie(headers) -> dict:
+    """Parse Set-Cookie headers (httpx ASGITransport doesn't populate response.cookies)."""
+    c = SimpleCookie()
+    for set_cookie in headers.get_list("set-cookie"):
+        c.load(set_cookie)
+    return {
+        "access_token": c.get("access_token").value if c.get("access_token") else None,
+        "refresh_token": c.get("refresh_token").value if c.get("refresh_token") else None,
+    }
+
+
 @pytest_asyncio.fixture
 async def auth_cookies(client: AsyncClient, test_user: User) -> dict:
     response = await client.post("/api/v1/auth/login", json={
         "email": "test@example.com",
         "password": "TestPass123",
     })
-    cookies = response.cookies
-    return {"access_token": cookies.get("access_token"), "refresh_token": cookies.get("refresh_token")}
+    return _parse_set_cookie(response.headers)

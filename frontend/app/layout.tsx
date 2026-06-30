@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 const siteUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -96,7 +97,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen">{children}</body>
+      <body className="min-h-screen"><AuthProvider>{children}</AuthProvider></body>
     </html>
   );
 }

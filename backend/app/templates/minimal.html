@@ -82,10 +82,11 @@ hr { border: none; border-top: 1px solid #f1f5f9; margin: 18px 0; }
   {% endif %}
   {% endif %}
 
-  {% if work_experience and work_experience.items %}
+  {% set work = work_experience.get("items") if work_experience else [] %}
+  {% if work %}
   <div class="section">
     <div class="section-title">Ish Tajribasi</div>
-    {% for exp in work_experience.items %}
+    {% for exp in work %}
     <div class="item">
       <div class="item-meta">{{ exp.start_date or '' }} — {% if exp.is_current %}Hozir{% else %}{{ exp.end_date or '' }}{% endif %}</div>
       <div class="item-title">{{ exp.position or '' }}</div>
@@ -96,10 +97,11 @@ hr { border: none; border-top: 1px solid #f1f5f9; margin: 18px 0; }
   </div>
   {% endif %}
 
-  {% if education and education.items %}
+  {% set edu_items = education.get("items") if education else [] %}
+  {% if edu_items %}
   <div class="section">
     <div class="section-title">Ta'lim</div>
-    {% for edu in education.items %}
+    {% for edu in edu_items %}
     <div class="item">
       <div class="item-meta">{{ edu.start_year or '' }} — {{ edu.end_year or '' }}</div>
       <div class="item-title">{{ edu.university or '' }}</div>
@@ -125,10 +127,11 @@ hr { border: none; border-top: 1px solid #f1f5f9; margin: 18px 0; }
   </div>
   {% endif %}
 
-  {% if projects and projects.items %}
+  {% set proj_items = projects.get("items") if projects else [] %}
+  {% if proj_items %}
   <div class="section">
     <div class="section-title">Loyihalar</div>
-    {% for proj in projects.items %}
+    {% for proj in proj_items %}
     <div class="item">
       <div class="item-title">{{ proj.name or '' }}</div>
       {% if proj.description %}<div class="item-desc">{{ proj.description }}</div>{% endif %}
@@ -138,10 +141,11 @@ hr { border: none; border-top: 1px solid #f1f5f9; margin: 18px 0; }
   </div>
   {% endif %}
 
-  {% if certifications and certifications.items %}
+  {% set certs = certifications.get("items") if certifications else [] %}
+  {% if certs %}
   <div class="section">
     <div class="section-title">Sertifikatlar</div>
-    {% for cert in certifications.items %}
+    {% for cert in certs %}
     <div class="item">
       <div class="item-title">{{ cert.name or '' }}</div>
       <div class="item-sub">{{ cert.issuer or '' }}</div>
