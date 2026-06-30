@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,17 +9,25 @@ from app.core.deps import get_current_user
 from app.models.user import User
 from app.models.resume import Resume
 from app.models.section import Section
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/ats", tags=["ats"])
 
+
+class ATSCheckRequest(BaseModel):
+    data: dict
+
 OZBEK_IT_KEYWORDS = [
-    "python", "javascript", "typescript", "java", "go", "rust",
-    "react", "next.js", "vue", "angular", "node.js", "django",
-    "fastapi", "flask", "spring", "laravel",
-    "postgresql", "mysql", "mongodb", "redis",
-    "docker", "kubernetes", "nginx", "kafka",
-    "aws", "gcp", "azure", "git", "linux",
-    "sql", "rest api", "graphql", "microservices",
+    "python", "javascript", "typescript", "java", "go", "rust", "c++", "c#",
+    "react", "next.js", "vue", "angular", "node.js", "express", "django",
+    "fastapi", "flask", "spring", "laravel", "dotnet",
+    "postgresql", "mysql", "mongodb", "redis", "elasticsearch",
+    "docker", "kubernetes", "nginx", "kafka", "rabbitmq",
+    "aws", "gcp", "azure", "git", "linux", "bash",
+    "sql", "rest api", "graphql", "grpc", "websocket",
+    "pytest", "jest", "ci/cd", "github actions", "gitlab ci",
+    "microservices", "solid", "tdd", "agile", "scrum",
+    "telegram bot", "bot", "api", "backend", "frontend", "fullstack",
 ]
 
 
@@ -104,7 +114,7 @@ def calculate_score(data: dict) -> dict:
 
 @router.get("/score/{resume_id}")
 async def get_ats_score(
-    resume_id: str,
+    resume_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -135,3 +145,8 @@ async def get_ats_score(
     await db.commit()
 
     return ats_result
+
+
+@router.post("/check")
+async def check_ats_score(payload: ATSCheckRequest):
+    return calculate_score(payload.data)

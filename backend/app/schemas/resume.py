@@ -1,3 +1,6 @@
+import uuid
+from datetime import datetime
+
 from pydantic import BaseModel
 
 from app.schemas.section import SectionResponse
@@ -5,35 +8,35 @@ from app.schemas.section import SectionResponse
 
 class ResumeCreate(BaseModel):
     title: str = "Mening CV"
-    template_id: str | None = None
+    template_id: uuid.UUID | None = None
     language: str = "uz"
 
 
 class ResumeUpdate(BaseModel):
     title: str | None = None
-    template_id: str | None = None
+    template_id: uuid.UUID | None = None
     language: str | None = None
     is_completed: bool | None = None
 
 
 class ResumeAutoSave(BaseModel):
     title: str | None = None
-    template_id: str | None = None
+    template_id: uuid.UUID | None = None
     language: str | None = None
     is_completed: bool | None = None
     sections: list[dict] | None = None
 
 
 class ResumeResponse(BaseModel):
-    id: str
-    user_id: str
+    id: uuid.UUID
+    user_id: uuid.UUID
     title: str
-    template_id: str | None
+    template_id: uuid.UUID | None
     language: str
     is_completed: bool
     ats_score: int | None
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
     sections: list[SectionResponse] = []
 
     class Config:
@@ -41,12 +44,12 @@ class ResumeResponse(BaseModel):
 
 
 class ResumeListItem(BaseModel):
-    id: str
+    id: uuid.UUID
     title: str
     language: str
     is_completed: bool
     ats_score: int | None
-    updated_at: str
+    updated_at: datetime
 
     class Config:
         from_attributes = True

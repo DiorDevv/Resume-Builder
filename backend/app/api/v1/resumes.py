@@ -1,5 +1,8 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -10,7 +13,6 @@ from app.models.section import Section
 from app.schemas.resume import (
     ResumeAutoSave,
     ResumeCreate,
-    ResumeListItem,
     ResumeListResponse,
     ResumeResponse,
     ResumeUpdate,
@@ -20,18 +22,21 @@ from app.schemas.section import (
     SectionReorder,
     SectionResponse,
     SectionUpdate,
+    validate_section_data,
 )
 
 router = APIRouter(prefix="/resumes", tags=["resumes"])
 
 
 async def get_resume_or_404(
-    resume_id: str,
+    resume_id: uuid.UUID,
     user: User,
     db: AsyncSession,
 ) -> Resume:
     result = await db.execute(
-        select(Resume).where(Resume.id == resume_id, Resume.user_id == user.id)
+        select(Resume)
+        .options(selectinload(Resume.sections))
+        .where(Resume.id == resume_id, Resume.user_id == user.id)
     )
     resume = result.scalar_one_or_none()
     if not resume:
@@ -46,11 +51,15 @@ async def get_resume_or_404(
 async def list_resumes(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    limit: int = 20,
+    offset: int = 0,
 ):
     result = await db.execute(
         select(Resume)
         .where(Resume.user_id == user.id)
         .order_by(Resume.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
     )
     resumes = result.scalars().all()
     return ResumeListResponse(resumes=resumes)
@@ -70,13 +79,15 @@ async def create_resume(
     )
     db.add(resume)
     await db.commit()
-    await db.refresh(resume)
-    return resume
+    result = await db.execute(
+        select(Resume).options(selectinload(Resume.sections)).where(Resume.id == resume.id)
+    )
+    return result.scalar_one()
 
 
 @router.get("/{resume_id}", response_model=ResumeResponse)
 async def get_resume(
-    resume_id: str,
+    resume_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -86,7 +97,7 @@ async def get_resume(
 
 @router.put("/{resume_id}", response_model=ResumeResponse)
 async def update_resume(
-    resume_id: str,
+    resume_id: uuid.UUID,
     payload: ResumeUpdate,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -98,13 +109,15 @@ async def update_resume(
         setattr(resume, key, value)
 
     await db.commit()
-    await db.refresh(resume)
-    return resume
+    result = await db.execute(
+        select(Resume).options(selectinload(Resume.sections)).where(Resume.id == resume.id)
+    )
+    return result.scalar_one()
 
 
 @router.delete("/{resume_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_resume(
-    resume_id: str,
+    resume_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -115,7 +128,7 @@ async def delete_resume(
 
 @router.patch("/{resume_id}/auto-save", response_model=ResumeResponse)
 async def auto_save_resume(
-    resume_id: str,
+    resume_id: uuid.UUID,
     payload: ResumeAutoSave,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -138,27 +151,35 @@ async def auto_save_resume(
                 )
                 section = result.scalar_one_or_none()
                 if section:
+                    if "data" in section_data:
+                        section_data["data"] = validate_section_data(
+                            section.section_type, section_data["data"]
+                        )
                     for key, value in section_data.items():
                         if key != "id":
                             setattr(section, key, value)
             else:
+                st = section_data.get("section_type", "custom")
+                sd = validate_section_data(st, section_data.get("data", {}))
                 section = Section(
                     resume_id=resume.id,
-                    section_type=section_data.get("section_type", "custom"),
+                    section_type=st,
                     sort_order=section_data.get("sort_order", 0),
                     title=section_data.get("title"),
-                    data=section_data.get("data", {}),
+                    data=sd,
                 )
                 db.add(section)
 
     await db.commit()
-    await db.refresh(resume)
-    return resume
+    result = await db.execute(
+        select(Resume).options(selectinload(Resume.sections)).where(Resume.id == resume.id)
+    )
+    return result.scalar_one()
 
 
 @router.get("/{resume_id}/sections", response_model=list[SectionResponse])
 async def list_sections(
-    resume_id: str,
+    resume_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -168,7 +189,7 @@ async def list_sections(
 
 @router.post("/{resume_id}/sections", response_model=SectionResponse, status_code=status.HTTP_201_CREATED)
 async def create_section(
-    resume_id: str,
+    resume_id: uuid.UUID,
     payload: SectionCreate,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -190,8 +211,8 @@ async def create_section(
 
 @router.put("/{resume_id}/sections/{section_id}", response_model=SectionResponse)
 async def update_section(
-    resume_id: str,
-    section_id: str,
+    resume_id: uuid.UUID,
+    section_id: uuid.UUID,
     payload: SectionUpdate,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -209,6 +230,8 @@ async def update_section(
         )
 
     update_data = payload.model_dump(exclude_unset=True)
+    if "data" in update_data:
+        update_data["data"] = validate_section_data(section.section_type, update_data["data"])
     for key, value in update_data.items():
         setattr(section, key, value)
 
@@ -219,8 +242,8 @@ async def update_section(
 
 @router.delete("/{resume_id}/sections/{section_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_section(
-    resume_id: str,
-    section_id: str,
+    resume_id: uuid.UUID,
+    section_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -242,7 +265,7 @@ async def delete_section(
 
 @router.put("/{resume_id}/sections/reorder", status_code=status.HTTP_200_OK)
 async def reorder_sections(
-    resume_id: str,
+    resume_id: uuid.UUID,
     payload: SectionReorder,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

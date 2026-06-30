@@ -1,36 +1,28 @@
-"use client";
+'use client';
 
 import { ATSPanel } from "./ats-panel";
 
 interface PreviewProps {
-  data: {
-    personalInfo?: Record<string, string>;
-    workExperience?: { items?: Array<Record<string, unknown>> };
-    education?: { items?: Array<Record<string, unknown>> };
-    skills?: {
-      technical?: string[];
-      languages?: Array<{ language: string; level: string }>;
-      soft?: string[];
-    };
-    projects?: { items?: Array<Record<string, unknown>> };
-    certifications?: { items?: Array<Record<string, unknown>> };
-    languagesSection?: { items?: Array<{ language: string; level: string }> };
-    [key: string]: unknown;
-  };
+  data: Record<string, unknown>;
 }
 
 export function ResumePreview({ data }: PreviewProps) {
-  const info = data.personalInfo || {};
-  const work = data.workExperience?.items || [];
-  const edu = data.education?.items || [];
+  const info = (data.personal_info || data.personalInfo || {}) as Record<string, unknown>;
+  const workData = (data.work_experience || data.workExperience || {}) as { items?: Array<Record<string, unknown>> };
+  const work = workData.items || [];
+  const eduData = (data.education || {}) as { items?: Array<Record<string, unknown>> };
+  const edu = eduData.items || [];
   const skills = (data.skills || {
     technical: [],
     languages: [],
     soft: [],
   }) as { technical: string[]; languages: Array<{ language: string; level: string }>; soft: string[] };
-  const projects = data.projects?.items || [];
-  const certs = data.certifications?.items || [];
-  const langs = data.languagesSection?.items || [];
+  const projectsData = (data.projects || {}) as { items?: Array<Record<string, unknown>> };
+  const projects = projectsData.items || [];
+  const certsData = (data.certifications || {}) as { items?: Array<Record<string, unknown>> };
+  const certs = certsData.items || [];
+  const langsData = (data.languages || data.languagesSection || {}) as { items?: Array<{ language: string; level: string }> };
+  const langs = langsData.items || [];
 
   const hasContent =
     info.full_name ||
@@ -58,29 +50,29 @@ export function ResumePreview({ data }: PreviewProps) {
           </div>
         ) : (
           <div className="space-y-5">
-            {info.full_name && (
+            {info.full_name ? (
               <div>
                 <h2 className="text-base font-bold text-[#F8FAFC]">
                   {s(info.full_name)}
                 </h2>
                 <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xxs text-muted">
-                  {info.email && <span>{s(info.email)}</span>}
-                  {info.phone && <span>{s(info.phone)}</span>}
-                  {info.city && <span>{s(info.city)}</span>}
+                  {info.email ? <span>{s(info.email)}</span> : null}
+                  {info.phone ? <span>{s(info.phone)}</span> : null}
+                  {info.city ? <span>{s(info.city)}</span> : null}
                 </div>
-                {(info.linkedin || info.github) && (
+                {info.linkedin || info.github ? (
                   <div className="mt-1 flex gap-3 text-xxs text-accent">
-                    {info.linkedin && <span>{s(info.linkedin)}</span>}
-                    {info.github && <span>{s(info.github)}</span>}
+                    {info.linkedin ? <span>{s(info.linkedin)}</span> : null}
+                    {info.github ? <span>{s(info.github)}</span> : null}
                   </div>
-                )}
-                {info.summary && (
+                ) : null}
+                {info.summary ? (
                   <p className="mt-2 text-xxs text-muted leading-relaxed">
                     {s(info.summary)}
                   </p>
-                )}
+                ) : null}
               </div>
-            )}
+            ) : null}
 
             {work.length > 0 && (
               <div>
@@ -174,12 +166,12 @@ export function ResumePreview({ data }: PreviewProps) {
                 )}
                 {skills.soft.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
-                    {skills.soft.map((s, i) => (
+                    {skills.soft.map((skill, i) => (
                       <span
                         key={i}
                         className="rounded-badge bg-surface border border-border px-2 py-0.5 text-xxs text-muted"
                       >
-                        {s}
+                        {skill}
                       </span>
                     ))}
                   </div>
@@ -201,9 +193,9 @@ export function ResumePreview({ data }: PreviewProps) {
                       {item.description ? (
                         <p className="text-xxs text-muted">{s(item.description)}</p>
                       ) : null}
-                      {item.technologies ? (
+                      {(item.technologies as string[] | string) ? (
                         <div className="text-xxs text-accent">
-                          {s(item.technologies)}
+                          {Array.isArray(item.technologies) ? (item.technologies as string[]).join(", ") : s(item.technologies)}
                         </div>
                       ) : null}
                     </div>

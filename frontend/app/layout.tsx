@@ -24,6 +24,7 @@ export const metadata: Metadata = {
   creator: "Resume Builder",
   publisher: "Resume Builder",
   metadataBase: new URL(siteUrl),
+  manifest: "/manifest.json",
   openGraph: {
     type: "website",
     locale: "uz_UZ",
@@ -51,7 +52,14 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: "placeholder", // Replace with actual Google Site Verification
+    google: "placeholder",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icons/icon-192x192.png",
   },
 };
 
@@ -63,6 +71,10 @@ export default function RootLayout({
   return (
     <html lang="uz" className="scroll-smooth">
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#6366F1" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

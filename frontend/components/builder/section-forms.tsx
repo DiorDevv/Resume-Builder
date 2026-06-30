@@ -2,66 +2,163 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, GripVertical, Plus, Trash2 } from "lucide-react";
+import {
+  ChevronDown, GripVertical, Plus, Trash2,
+  User, Briefcase, GraduationCap, Code2, FolderGit2, Award, Globe,
+} from "lucide-react";
+import { useDragHandle } from "@/components/builder/sortable-section";
+
+const SECTION_CONFIG = {
+  personal_info:    { icon: User,          color: "#6366F1", label: "Shaxsiy ma'lumotlar" },
+  work_experience:  { icon: Briefcase,     color: "#10B981", label: "Ish tajribasi" },
+  education:        { icon: GraduationCap, color: "#3B82F6", label: "Ta'lim" },
+  skills:           { icon: Code2,         color: "#8B5CF6", label: "Ko'nikmalar" },
+  projects:         { icon: FolderGit2,    color: "#F97316", label: "Loyihalar" },
+  certifications:   { icon: Award,         color: "#F59E0B", label: "Sertifikatlar" },
+  languages:        { icon: Globe,         color: "#06B6D4", label: "Tillar" },
+} as const;
+
+type SectionType = keyof typeof SECTION_CONFIG;
 
 interface CollapsibleCardProps {
-  title: string;
+  sectionType: SectionType;
+  data?: Record<string, unknown>;
   defaultOpen?: boolean;
   children: React.ReactNode;
-  dragHandle?: boolean;
-  onDelete?: () => void;
+}
+
+function computeProgress(sectionType: SectionType, data?: Record<string, unknown>): { filled: number; total: number } | null {
+  if (!data) return null;
+  switch (sectionType) {
+    case "personal_info": {
+      const fields = ["full_name", "email", "phone", "city", "linkedin", "github", "portfolio", "summary"];
+      const filled = fields.filter((f) => (data[f] as string)?.trim().length > 0).length;
+      return { filled, total: fields.length };
+    }
+    case "work_experience":
+    case "education":
+    case "projects":
+    case "certifications": {
+      const items = (data.items as Array<Record<string, unknown>>) || [];
+      const filled = items.filter((item) => {
+        if (sectionType === "work_experience") return !!(item.company || item.position);
+        if (sectionType === "education") return !!(item.university || item.degree);
+        if (sectionType === "projects") return !!(item.name);
+        if (sectionType === "certifications") return !!(item.name);
+        return false;
+      }).length;
+      return { filled, total: Math.max(items.length || 1, 1) };
+    }
+    case "skills": {
+      const technical = (data.technical as string[]) || [];
+      const languages = (data.languages as Array<unknown>) || [];
+      const soft = (data.soft as string[]) || [];
+      const filled = [technical.length > 0, languages.length > 0, soft.length > 0].filter(Boolean).length;
+      return { filled, total: 3 };
+    }
+    case "languages": {
+      const langItems = (data.items as Array<Record<string, unknown>>) || [];
+      const filled = langItems.filter((l) => (l.language as string)?.trim().length > 0).length;
+      return { filled, total: Math.max(langItems.length || 1, 1) };
+    }
+    default:
+      return null;
+  }
+}
+
+const progressVariant = {
+  initial: { opacity: 0, scale: 0.8 },
+  animate: { opacity: 1, scale: 1 },
+};
+
+function ProgressBadge({ filled, total }: { filled: number; total: number }) {
+  const pct = total > 0 ? filled / total : 0;
+  return (
+    <motion.span
+      variants={progressVariant}
+      initial="initial"
+      animate="animate"
+      className={`text-xxs font-medium tabular-nums ${
+        pct === 0 ? "text-muted/50" : pct >= 1 ? "text-success" : "text-muted"
+      }`}
+    >
+      {filled}/{total}
+    </motion.span>
+  );
 }
 
 export function CollapsibleCard({
-  title,
+  sectionType,
+  data,
   defaultOpen = true,
   children,
-  dragHandle,
-  onDelete,
 }: CollapsibleCardProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const dragCtx = useDragHandle();
+  const config = SECTION_CONFIG[sectionType];
+  const progress = computeProgress(sectionType, data);
 
   return (
-    <div className="glass rounded-card overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left"
-      >
-        <div className="flex items-center gap-2">
-          {dragHandle && (
-            <GripVertical className="h-4 w-4 text-muted cursor-grab" />
-          )}
-          <span className="text-xs font-semibold text-[#F8FAFC]">{title}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {onDelete && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="text-muted hover:text-red-400 transition-colors"
+    <div className="glass rounded-card overflow-hidden relative">
+      <div
+        className="absolute left-0 top-0 bottom-0 w-[4px]"
+        style={{ backgroundColor: config.color }}
+      />
+      <div className="pl-4">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="flex w-full items-center justify-between pr-4 py-3 text-left"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            {dragCtx && (
+              <button
+                type="button"
+                {...dragCtx.attributes}
+                {...dragCtx.listeners}
+                className="cursor-grab active:cursor-grabbing text-muted hover:text-[#F8FAFC] transition-colors shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GripVertical className="h-4 w-4" />
+              </button>
+            )}
+            {config && (
+              <config.icon className="h-4 w-4 shrink-0" style={{ color: config.color }} />
+            )}
+            <span className="text-xs font-semibold text-[#F8FAFC] truncate">
+              {config?.label || sectionType}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-2">
+            {progress && <ProgressBadge filled={progress.filled} total={progress.total} />}
+            {dragCtx?.onDelete && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); dragCtx.onDelete?.(); }}
+                className="text-muted hover:text-red-400 transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <ChevronDown
+              className={`h-4 w-4 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+            />
+          </div>
+        </button>
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
             >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+              <div className="pr-4 pb-4 space-y-3">{children}</div>
+            </motion.div>
           )}
-          <ChevronDown
-            className={`h-4 w-4 text-muted transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </div>
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4 space-y-3">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -74,6 +171,7 @@ interface FieldProps {
   multiline?: boolean;
   type?: string;
   disabled?: boolean;
+  maxLength?: number;
 }
 
 export function Field({
@@ -84,22 +182,32 @@ export function Field({
   multiline,
   type = "text",
   disabled,
+  maxLength,
 }: FieldProps) {
   const id = label.replace(/\s+/g, "-").toLowerCase();
+  const charsLeft = maxLength ? maxLength - value.length : null;
+  const pct = maxLength ? value.length / maxLength : 0;
+  const counterColor =
+    pct > 1 ? "text-red-400" : pct > 0.9 ? "text-warning" : "text-muted/60";
+
   return (
     <div>
-      <label htmlFor={id} className="block text-xxs font-medium text-muted mb-1">
+      <label htmlFor={id} className="block text-xxs font-medium text-muted mb-1.5">
         {label}
       </label>
       {multiline ? (
         <textarea
           id={id}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            if (maxLength && e.target.value.length > maxLength) return;
+            onChange(e.target.value);
+          }}
           placeholder={placeholder}
           rows={3}
           disabled={disabled}
-          className="w-full rounded-input bg-primary border border-border px-3 py-2 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors resize-none disabled:opacity-50"
+          maxLength={maxLength}
+          className="w-full rounded-input bg-primary border border-border px-3 py-2 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent focus:shadow-[0_0_12px_rgba(99,102,241,0.15)] transition-all resize-none disabled:opacity-50"
         />
       ) : (
         <input
@@ -109,8 +217,15 @@ export function Field({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full rounded-input bg-primary border border-border px-3 py-2 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors disabled:opacity-50"
+          className="w-full rounded-input bg-primary border border-border px-3 py-2 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent focus:shadow-[0_0_12px_rgba(99,102,241,0.15)] transition-all disabled:opacity-50"
         />
+      )}
+      {multiline && charsLeft !== null && (
+        <div className="flex justify-end mt-1">
+          <span className={`text-xxs tabular-nums ${counterColor}`}>
+            {value.length}/{maxLength}
+          </span>
+        </div>
       )}
     </div>
   );
@@ -126,7 +241,7 @@ export function PersonalInfoForm({
   const set = (key: string) => (val: string) => onChange({ ...data, [key]: val });
 
   return (
-    <CollapsibleCard title="Shaxsiy ma'lumotlar">
+    <CollapsibleCard sectionType="personal_info" data={data as unknown as Record<string, unknown>}>
       <div className="grid grid-cols-2 gap-3">
         <Field label="To'liq ism" placeholder="Aliyev Alisher" value={data.full_name || ""} onChange={set("full_name")} />
         <Field label="Email" placeholder="alisher@example.com" value={data.email || ""} onChange={set("email")} type="email" />
@@ -144,10 +259,42 @@ export function PersonalInfoForm({
             value={data.summary || ""}
             onChange={set("summary")}
             multiline
+            maxLength={500}
           />
         </div>
       </div>
     </CollapsibleCard>
+  );
+}
+
+function ItemCard({
+  sectionType,
+  index,
+  children,
+  onRemove,
+}: {
+  sectionType: SectionType;
+  index: number;
+  children: React.ReactNode;
+  onRemove: () => void;
+}) {
+  const config = SECTION_CONFIG[sectionType];
+  return (
+    <div
+      className="rounded-input bg-primary/50 border border-border p-3 space-y-2"
+      style={{ borderLeftColor: config?.color || "#6366F1", borderLeftWidth: 2 }}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-xxs font-medium text-muted flex items-center gap-1.5">
+          {config && <config.icon className="h-3 w-3" style={{ color: config.color }} />}
+          {config?.label} #{index + 1}
+        </span>
+        <button type="button" onClick={onRemove} className="text-muted hover:text-red-400 transition-colors">
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -181,16 +328,10 @@ export function WorkExperienceForm({
   };
 
   return (
-    <CollapsibleCard title="Ish tajribasi">
+    <CollapsibleCard sectionType="work_experience" data={data as unknown as Record<string, unknown>}>
       <div className="space-y-3">
         {items.map((item, i) => (
-          <div key={i} className="rounded-input bg-primary/50 border border-border p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xxs font-medium text-muted">#{i + 1}</span>
-              <button type="button" onClick={() => removeItem(i)} className="text-muted hover:text-red-400 transition-colors">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+          <ItemCard key={i} sectionType="work_experience" index={i} onRemove={() => removeItem(i)}>
             <div className="grid grid-cols-2 gap-2">
               <Field label="Kompaniya" placeholder="Uzum" value={String(item.company || "")} onChange={(v) => updateItem(i, "company", v)} />
               <Field label="Lavozim" placeholder="Backend dasturchi" value={String(item.position || "")} onChange={(v) => updateItem(i, "position", v)} />
@@ -212,8 +353,9 @@ export function WorkExperienceForm({
               value={String(item.description || "")}
               onChange={(v) => updateItem(i, "description", v)}
               multiline
+              maxLength={1000}
             />
-          </div>
+          </ItemCard>
         ))}
         <button
           type="button"
@@ -254,16 +396,10 @@ export function EducationForm({
   };
 
   return (
-    <CollapsibleCard title="Ta'lim">
+    <CollapsibleCard sectionType="education" data={data as unknown as Record<string, unknown>}>
       <div className="space-y-3">
         {items.map((item, i) => (
-          <div key={i} className="rounded-input bg-primary/50 border border-border p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xxs font-medium text-muted">#{i + 1}</span>
-              <button type="button" onClick={() => removeItem(i)} className="text-muted hover:text-red-400 transition-colors">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+          <ItemCard key={i} sectionType="education" index={i} onRemove={() => removeItem(i)}>
             <div className="grid grid-cols-2 gap-2">
               <div className="col-span-2">
                 <Field label="Universitet" placeholder="Toshkent Axborot Texnologiyalari Universiteti" value={String(item.university || "")} onChange={(v) => updateItem(i, "university", v)} />
@@ -276,7 +412,7 @@ export function EducationForm({
                 <Field label="GPA (ixtiyoriy)" placeholder="4.0" value={String(item.gpa || "")} onChange={(v) => updateItem(i, "gpa", v)} />
               </div>
             </div>
-          </div>
+          </ItemCard>
         ))}
         <button
           type="button"
@@ -289,6 +425,15 @@ export function EducationForm({
     </CollapsibleCard>
   );
 }
+
+const LEVEL_COLORS: Record<string, string> = {
+  A1: "bg-muted/10 text-muted border-muted/20",
+  A2: "bg-muted/10 text-muted border-muted/20",
+  B1: "bg-accent/10 text-accent border-accent/20",
+  B2: "bg-accent/10 text-accent border-accent/20",
+  C1: "bg-success/10 text-success border-success/20",
+  C2: "bg-success/10 text-success border-success/20",
+};
 
 export function SkillsForm({
   data,
@@ -343,16 +488,24 @@ export function SkillsForm({
   const levels = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
   return (
-    <CollapsibleCard title="Ko'nikmalar">
+    <CollapsibleCard sectionType="skills" data={data as unknown as Record<string, unknown>}>
       <div className="space-y-4">
         <div>
-          <label className="block text-xxs font-medium text-muted mb-1">Texnik ko'nikmalar</label>
+          <label className="block text-xxs font-medium text-muted mb-1.5 flex items-center gap-1.5">
+            <Code2 className="h-3 w-3 text-accent" />
+            Texnik ko'nikmalar
+          </label>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {data.technical.map((t, i) => (
-              <span key={i} className="inline-flex items-center gap-1 rounded-badge bg-accent/10 px-2 py-0.5 text-xxs text-accent">
+              <motion.span
+                key={i}
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="inline-flex items-center gap-1 rounded-badge bg-accent/10 border border-accent/20 px-2 py-0.5 text-xxs text-accent"
+              >
                 {t}
                 <button type="button" onClick={() => removeTech(i)} className="hover:text-red-400">&times;</button>
-              </span>
+              </motion.span>
             ))}
           </div>
           <div className="flex gap-2">
@@ -361,16 +514,19 @@ export function SkillsForm({
               onChange={(e) => setTechInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTech(); } }}
               placeholder="Python, FastAPI, Docker..."
-              className="flex-1 rounded-input bg-primary border border-border px-3 py-2 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent"
+              className="flex-1 rounded-input bg-primary border border-border px-3 py-2 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent focus:shadow-[0_0_12px_rgba(99,102,241,0.15)] transition-all"
             />
-            <button type="button" onClick={addTech} className="rounded-input bg-accent px-3 text-xs text-white hover:bg-accent-glow transition-colors">
+            <button type="button" onClick={addTech} className="rounded-input bg-accent px-3 text-xs text-white hover:bg-accent-glow transition-colors shrink-0">
               Qo'shish
             </button>
           </div>
         </div>
 
         <div>
-          <label className="block text-xxs font-medium text-muted mb-1">Til darajalari</label>
+          <label className="block text-xxs font-medium text-muted mb-1.5 flex items-center gap-1.5">
+            <Globe className="h-3 w-3 text-[#06B6D4]" />
+            Til darajalari
+          </label>
           <div className="space-y-2">
             {data.languages.map((lang, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -378,7 +534,7 @@ export function SkillsForm({
                   value={lang.language}
                   onChange={(e) => updateLang(i, "language", e.target.value)}
                   placeholder="Ingliz tili"
-                  className="flex-1 rounded-input bg-primary border border-border px-3 py-1.5 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent"
+                  className="flex-1 rounded-input bg-primary border border-border px-3 py-1.5 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent focus:shadow-[0_0_12px_rgba(99,102,241,0.15)] transition-all"
                 />
                 <select
                   value={lang.level}
@@ -387,7 +543,10 @@ export function SkillsForm({
                 >
                   {levels.map((l) => <option key={l} value={l}>{l}</option>)}
                 </select>
-                <button type="button" onClick={() => removeLang(i)} className="text-muted hover:text-red-400">
+                <span className={`rounded-badge px-1.5 py-0.5 text-xxs border ${LEVEL_COLORS[lang.level] || LEVEL_COLORS.A1}`}>
+                  {lang.level}
+                </span>
+                <button type="button" onClick={() => removeLang(i)} className="text-muted hover:text-red-400 shrink-0">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -399,13 +558,18 @@ export function SkillsForm({
         </div>
 
         <div>
-          <label className="block text-xxs font-medium text-muted mb-1">Soft skills</label>
+          <label className="block text-xxs font-medium text-muted mb-1.5">Soft skills</label>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {data.soft.map((s, i) => (
-              <span key={i} className="inline-flex items-center gap-1 rounded-badge bg-surface border border-border px-2 py-0.5 text-xxs text-muted">
+              <motion.span
+                key={i}
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="inline-flex items-center gap-1 rounded-badge bg-surface border border-border px-2 py-0.5 text-xxs text-muted"
+              >
                 {s}
                 <button type="button" onClick={() => removeSoft(i)} className="hover:text-red-400">&times;</button>
-              </span>
+              </motion.span>
             ))}
           </div>
           <div className="flex gap-2">
@@ -414,9 +578,9 @@ export function SkillsForm({
               onChange={(e) => setSoftInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSoft(); } }}
               placeholder="Communication, Leadership..."
-              className="flex-1 rounded-input bg-primary border border-border px-3 py-2 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent"
+              className="flex-1 rounded-input bg-primary border border-border px-3 py-2 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent focus:shadow-[0_0_12px_rgba(99,102,241,0.15)] transition-all"
             />
-            <button type="button" onClick={addSoft} className="rounded-input bg-accent px-3 text-xs text-white hover:bg-accent-glow transition-colors">
+            <button type="button" onClick={addSoft} className="rounded-input bg-accent px-3 text-xs text-white hover:bg-accent-glow transition-colors shrink-0">
               Qo'shish
             </button>
           </div>
@@ -425,8 +589,6 @@ export function SkillsForm({
     </CollapsibleCard>
   );
 }
-
-const defaultProjects = { items: [] as Array<Record<string, unknown>> };
 
 export function ProjectsForm({
   data,
@@ -450,22 +612,16 @@ export function ProjectsForm({
   };
 
   return (
-    <CollapsibleCard title="Loyihalar">
+    <CollapsibleCard sectionType="projects" data={data as unknown as Record<string, unknown>}>
       <div className="space-y-3">
         {items.map((item, i) => (
-          <div key={i} className="rounded-input bg-primary/50 border border-border p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xxs font-medium text-muted">#{i + 1}</span>
-              <button type="button" onClick={() => removeItem(i)} className="text-muted hover:text-red-400">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+          <ItemCard key={i} sectionType="projects" index={i} onRemove={() => removeItem(i)}>
             <Field label="Loyiha nomi" placeholder="E-commerce API" value={String(item.name || "")} onChange={(v) => updateItem(i, "name", v)} />
-            <Field label="Tavsif" placeholder="..." value={String(item.description || "")} onChange={(v) => updateItem(i, "description", v)} multiline />
+            <Field label="Tavsif" placeholder="..." value={String(item.description || "")} onChange={(v) => updateItem(i, "description", v)} multiline maxLength={1000} />
             <Field label="Texnologiyalar" placeholder="FastAPI, PostgreSQL, Redis" value={String(item.technologies || "")} onChange={(v) => updateItem(i, "technologies", v)} />
             <Field label="GitHub URL" placeholder="https://github.com/..." value={String(item.github_url || "")} onChange={(v) => updateItem(i, "github_url", v)} />
             <Field label="Live URL" placeholder="https://..." value={String(item.live_url || "")} onChange={(v) => updateItem(i, "live_url", v)} />
-          </div>
+          </ItemCard>
         ))}
         <button type="button" onClick={addItem} className="flex w-full items-center justify-center gap-2 rounded-input border border-dashed border-border py-2 text-xxs text-muted hover:text-accent hover:border-accent transition-all">
           <Plus className="h-3.5 w-3.5" /> Loyiha qo'shish
@@ -497,20 +653,14 @@ export function CertificationsForm({
   };
 
   return (
-    <CollapsibleCard title="Sertifikatlar">
+    <CollapsibleCard sectionType="certifications" data={data as unknown as Record<string, unknown>}>
       <div className="space-y-3">
         {items.map((item, i) => (
-          <div key={i} className="rounded-input bg-primary/50 border border-border p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xxs font-medium text-muted">#{i + 1}</span>
-              <button type="button" onClick={() => removeItem(i)} className="text-muted hover:text-red-400">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+          <ItemCard key={i} sectionType="certifications" index={i} onRemove={() => removeItem(i)}>
             <Field label="Sertifikat nomi" placeholder="AWS Solutions Architect" value={String(item.name || "")} onChange={(v) => updateItem(i, "name", v)} />
             <Field label="Beruvchi tashkilot" placeholder="Amazon" value={String(item.issuer || "")} onChange={(v) => updateItem(i, "issuer", v)} />
             <Field label="Sana" placeholder="2024-03" value={String(item.date || "")} onChange={(v) => updateItem(i, "date", v)} />
-          </div>
+          </ItemCard>
         ))}
         <button type="button" onClick={addItem} className="flex w-full items-center justify-center gap-2 rounded-input border border-dashed border-border py-2 text-xxs text-muted hover:text-accent hover:border-accent transition-all">
           <Plus className="h-3.5 w-3.5" /> Sertifikat qo'shish
@@ -543,7 +693,7 @@ export function LanguagesForm({
   };
 
   return (
-    <CollapsibleCard title="Tillar">
+    <CollapsibleCard sectionType="languages" data={data as unknown as Record<string, unknown>}>
       <div className="space-y-2">
         {items.map((item, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -551,7 +701,7 @@ export function LanguagesForm({
               value={item.language}
               onChange={(e) => updateItem(i, "language", e.target.value)}
               placeholder="Ingliz tili"
-              className="flex-1 rounded-input bg-primary border border-border px-3 py-1.5 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent"
+              className="flex-1 rounded-input bg-primary border border-border px-3 py-1.5 text-xs text-[#F8FAFC] placeholder:text-muted/50 focus:outline-none focus:border-accent focus:shadow-[0_0_12px_rgba(99,102,241,0.15)] transition-all"
             />
             <select
               value={item.level}
@@ -560,7 +710,10 @@ export function LanguagesForm({
             >
               {levels.map((l) => <option key={l} value={l}>{l}</option>)}
             </select>
-            <button type="button" onClick={() => removeItem(i)} className="text-muted hover:text-red-400">
+            <span className={`rounded-badge px-1.5 py-0.5 text-xxs border ${LEVEL_COLORS[item.level] || LEVEL_COLORS.A1}`}>
+              {item.level}
+            </span>
+            <button type="button" onClick={() => removeItem(i)} className="text-muted hover:text-red-400 shrink-0">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>

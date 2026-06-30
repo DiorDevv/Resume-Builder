@@ -1,9 +1,7 @@
 from app.schemas.user import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
-    RefreshRequest,
     ResetPasswordRequest,
-    TokenResponse,
     UserCreate,
     UserLogin,
     UserResponse,
@@ -25,8 +23,8 @@ from app.schemas.section import (
 from app.schemas.template import TemplateResponse, TemplateListResponse
 
 __all__ = [
-    "UserCreate", "UserLogin", "UserResponse", "TokenResponse",
-    "RefreshRequest", "ForgotPasswordRequest", "ResetPasswordRequest",
+    "UserCreate", "UserLogin", "UserResponse",
+    "ForgotPasswordRequest", "ResetPasswordRequest",
     "ChangePasswordRequest",
     "ResumeCreate", "ResumeUpdate", "ResumeAutoSave",
     "ResumeResponse", "ResumeListItem", "ResumeListResponse",

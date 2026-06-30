@@ -1,5 +1,4 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,25 +8,27 @@ from app.core.security import decode_token
 from app.models.user import User
 from app.services.token import is_token_blacklisted
 
-security = HTTPBearer(auto_error=False)
-
-
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    if not credentials:
+    token = request.cookies.get("access_token")
+
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
+            detail="Autentifikatsiya talab qilinadi",
         )
-
-    token = credentials.credentials
 
     if await is_token_blacklisted(token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has been revoked",
+            detail="Token bloklangan",
         )
 
     try:
@@ -35,12 +36,12 @@ async def get_current_user(
         if payload.get("type") != "access":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type",
+                detail="Noto'g'ri token turi",
             )
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail="Token yaroqsiz yoki muddati tugagan",
         )
 
     user_id = payload.get("sub")
@@ -50,20 +51,25 @@ async def get_current_user(
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or inactive",
+            detail="Foydalanuvchi topilmadi",
         )
 
     return user
 
 
 async def get_optional_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> User | None:
-    if not credentials:
-        return None
+    token = request.cookies.get("access_token")
 
-    token = credentials.credentials
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+
+    if not token:
+        return None
 
     if await is_token_blacklisted(token):
         return None

@@ -16,8 +16,10 @@ export function LanguageSwitcher() {
 
   const switchTo = (newLocale: string) => {
     const segments = pathname.split("/");
+    const currentLocale = segments[1] || "uz";
     segments[1] = newLocale;
-    router.push(segments.join("/"));
+    const newPath = segments.join("/");
+    router.push(newPath);
   };
 
   return (

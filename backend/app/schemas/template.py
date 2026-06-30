@@ -1,8 +1,9 @@
+import uuid
 from pydantic import BaseModel
 
 
 class TemplateResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     name: str
     thumbnail_url: str | None
     is_active: bool

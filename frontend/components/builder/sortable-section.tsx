@@ -1,16 +1,31 @@
 "use client";
 
+import { createContext, useContext, type ReactNode } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+
+type DragAttributes = ReturnType<typeof useSortable>["attributes"];
+type DragListeners = ReturnType<typeof useSortable>["listeners"];
+
+interface DragHandleValue {
+  attributes: DragAttributes;
+  listeners: DragListeners;
+  onDelete?: () => void;
+}
+
+const DragHandleContext = createContext<DragHandleValue | null>(null);
+
+export function useDragHandle() {
+  return useContext(DragHandleContext);
+}
 
 interface SortableSectionProps {
   id: string;
-  label: string;
-  children: React.ReactNode;
+  children: ReactNode;
+  onDelete?: () => void;
 }
 
-export function SortableSection({ id, label, children }: SortableSectionProps) {
+export function SortableSection({ id, children, onDelete }: SortableSectionProps) {
   const {
     attributes,
     listeners,
@@ -24,21 +39,14 @@ export function SortableSection({ id, label, children }: SortableSectionProps) {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 10 : "auto",
+    zIndex: isDragging ? 10 : undefined,
   };
 
   return (
     <div ref={setNodeRef} style={style} className="relative">
-      <div className="flex items-center gap-2 mb-1">
-        <button
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted hover:text-[#F8FAFC] transition-colors"
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
-      </div>
-      {children}
+      <DragHandleContext.Provider value={{ attributes, listeners, onDelete }}>
+        {children}
+      </DragHandleContext.Provider>
     </div>
   );
 }

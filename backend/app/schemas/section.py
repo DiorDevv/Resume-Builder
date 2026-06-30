@@ -1,5 +1,6 @@
-from datetime import date
-from pydantic import BaseModel
+import uuid
+from pydantic import BaseModel, model_validator
+from typing import Any
 
 
 class PersonalInfoData(BaseModel):
@@ -86,11 +87,34 @@ class CustomData(BaseModel):
     content: str = ""
 
 
+SECTION_DATA_SCHEMAS: dict[str, type[BaseModel]] = {
+    "personal_info": PersonalInfoData,
+    "work_experience": WorkExperienceData,
+    "education": EducationData,
+    "skills": SkillsData,
+    "projects": ProjectsData,
+    "certifications": CertificationsData,
+    "languages": LanguagesData,
+}
+
+
+def validate_section_data(section_type: str, data: Any) -> dict:
+    schema = SECTION_DATA_SCHEMAS.get(section_type)
+    if schema is None:
+        return data if isinstance(data, dict) else {}
+    return schema.model_validate(data).model_dump()
+
+
 class SectionCreate(BaseModel):
     section_type: str
     title: str | None = None
     sort_order: int = 0
     data: dict = {}
+
+    @model_validator(mode="after")
+    def _validate_data(self):
+        self.data = validate_section_data(self.section_type, self.data)
+        return self
 
 
 class SectionUpdate(BaseModel):
@@ -100,8 +124,8 @@ class SectionUpdate(BaseModel):
 
 
 class SectionResponse(BaseModel):
-    id: str
-    resume_id: str
+    id: uuid.UUID
+    resume_id: uuid.UUID
     section_type: str
     sort_order: int
     title: str | None

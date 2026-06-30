@@ -8,6 +8,7 @@ export function useAutoSave(resumeId: string | null) {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const dirtyRef = useRef(false);
+  const dataRef = useRef<Record<string, unknown> | null>(null);
 
   const save = useCallback(
     async (data: Record<string, unknown>) => {
@@ -20,8 +21,9 @@ export function useAutoSave(resumeId: string | null) {
         });
         setLastSaved(new Date());
         dirtyRef.current = false;
-      } catch {
-        // silent fail
+        dataRef.current = null;
+      } catch (err) {
+        console.warn("Auto-save failed:", err);
       } finally {
         setSaving(false);
       }
@@ -32,26 +34,32 @@ export function useAutoSave(resumeId: string | null) {
   const debouncedSave = useCallback(
     (data: Record<string, unknown>) => {
       dirtyRef.current = true;
+      dataRef.current = data;
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => save(data), 2000);
+      timerRef.current = setTimeout(() => {
+        if (dataRef.current) save(dataRef.current);
+      }, 2000);
     },
     [save]
   );
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (dirtyRef.current) {
-        // auto-save every 30s even if no changes
+      if (dirtyRef.current && dataRef.current) {
+        save(dataRef.current);
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [save]);
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (dirtyRef.current && dataRef.current) {
+        save(dataRef.current);
+      }
     };
-  }, []);
+  }, [save]);
 
   return { debouncedSave, saving, lastSaved };
 }

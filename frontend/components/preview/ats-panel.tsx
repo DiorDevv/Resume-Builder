@@ -1,15 +1,31 @@
 "use client";
 
-import { useMemo } from "react";
-import { calculateATSScore, getATSBadge, type ATSIssue } from "@/lib/ats-checker";
+import { useState, useEffect, useMemo } from "react";
+import { apiFetch } from "@/lib/api";
+import { calculateATSScore, getATSBadge, type ATSResult } from "@/lib/ats-checker";
+
+const EMPTY_RESULT: ATSResult = { score: 0, issues: [] };
 
 interface ATSPanelProps {
   data: Record<string, unknown>;
 }
 
 export function ATSPanel({ data }: ATSPanelProps) {
-  const result = useMemo(() => calculateATSScore(data), [data]);
+  const [serverResult, setServerResult] = useState<ATSResult | null>(null);
+  const result = useMemo(() => serverResult ?? calculateATSScore(data), [data, serverResult]);
   const badge = useMemo(() => getATSBadge(result.score), [result.score]);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<ATSResult>("/api/v1/ats/check", {
+      method: "POST",
+      skipAuth: true,
+      body: JSON.stringify({ data }),
+    })
+      .then((r) => { if (!cancelled) setServerResult(r); })
+      .catch(() => { if (!cancelled) setServerResult(null); });
+    return () => { cancelled = true; };
+  }, [data]);
 
   const errors = result.issues.filter((i) => i.type === "error");
   const warnings = result.issues.filter((i) => i.type === "warning");

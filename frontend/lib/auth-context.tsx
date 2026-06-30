@@ -6,9 +6,10 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
-import { auth } from "./api";
+import { auth, ApiError } from "./api";
 
 interface User {
   id: string;
@@ -20,53 +21,139 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  error: string | null;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (email: string, password: string, fullName?: string) => Promise<void>;
   logout: () => Promise<void>;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const initRef = useRef(false);
+  const mountedRef = useRef(true);
+  const sessionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const token = auth.getAccessToken();
-    if (token) {
-      auth
-        .me()
-        .then(setUser)
-        .catch(() => auth.clearTokens())
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const clearSessionTimeout = useCallback(() => {
+    if (sessionTimerRef.current) {
+      clearTimeout(sessionTimerRef.current);
+      sessionTimerRef.current = null;
     }
   }, []);
 
-  const login = useCallback(
-    async (email: string, password: string, rememberMe = false) => {
+  const startSessionTimeout = useCallback(() => {
+    clearSessionTimeout();
+    sessionTimerRef.current = setTimeout(() => {
+      if (mountedRef.current) {
+        auth.logout().then(() => {
+          setUser(null);
+          const locale = window.location.pathname.split("/")[1] || "uz";
+          window.location.href = `/${locale}/login`;
+        });
+      }
+    }, SESSION_TIMEOUT_MS);
+  }, [clearSessionTimeout]);
+
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+
+    if (!auth.isAuthenticated()) {
+      setLoading(false);
+      return;
+    }
+
+    auth
+      .me()
+      .then((userData) => {
+        if (mountedRef.current) {
+          setUser(userData);
+          startSessionTimeout();
+        }
+      })
+      .catch((err: unknown) => {
+        console.warn("Session check failed (token may be expired):", err);
+      })
+      .finally(() => {
+        if (mountedRef.current) setLoading(false);
+      });
+  }, [startSessionTimeout]);
+
+  const resetSession = useCallback(() => {
+    startSessionTimeout();
+  }, [startSessionTimeout]);
+
+  const login = useCallback(async (email: string, password: string, rememberMe = false) => {
+    setError(null);
+    try {
       await auth.login(email, password, rememberMe);
       const me = await auth.me();
-      setUser(me);
-    },
-    []
-  );
+      if (mountedRef.current) {
+        setUser(me);
+        startSessionTimeout();
+      }
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Kirishda xatolik yuz berdi";
+      if (mountedRef.current) setError(message);
+      throw err;
+    }
+  }, [startSessionTimeout]);
 
-  const register = useCallback(
-    async (email: string, password: string, fullName?: string) => {
+  const register = useCallback(async (email: string, password: string, fullName?: string) => {
+    setError(null);
+    try {
       await auth.register(email, password, fullName);
-    },
-    []
-  );
-
-  const logout = useCallback(async () => {
-    await auth.logout();
-    setUser(null);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Ro'yxatdan o'tishda xatolik";
+      if (mountedRef.current) setError(message);
+      throw err;
+    }
   }, []);
 
+  const logout = useCallback(async () => {
+    clearSessionTimeout();
+    await auth.logout();
+    if (mountedRef.current) {
+      setUser(null);
+      setError(null);
+    }
+  }, [clearSessionTimeout]);
+
+  const clearError = useCallback(() => {
+    if (mountedRef.current) setError(null);
+  }, []);
+
+  useEffect(() => {
+    const handleActivity = () => {
+      if (user) resetSession();
+    };
+
+    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+    window.addEventListener("click", handleActivity);
+    window.addEventListener("scroll", handleActivity);
+
+    return () => {
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("click", handleActivity);
+      window.removeEventListener("scroll", handleActivity);
+      clearSessionTimeout();
+    };
+  }, [user, resetSession, clearSessionTimeout]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, error, login, register, logout, clearError }}>
       {children}
     </AuthContext.Provider>
   );
