@@ -7,6 +7,7 @@ import { ATSPanel } from "./ats-panel";
 
 interface PreviewProps {
   data: Record<string, unknown>;
+  defaultTemplate?: TemplateKey;
 }
 
 type TemplateKey = "classic" | "modern" | "minimal";
@@ -100,8 +101,8 @@ const dateStyles: Record<TemplateKey, string> = {
   minimal: "text-xxs text-muted/60 whitespace-nowrap",
 };
 
-export function ResumePreview({ data }: PreviewProps) {
-  const [template, setTemplate] = useState<TemplateKey>("classic");
+export function ResumePreview({ data, defaultTemplate }: PreviewProps) {
+  const [template, setTemplate] = useState<TemplateKey>(defaultTemplate || "classic");
   const [zoom, setZoom] = useState(0.8);
   const [atsVisible, setAtsVisible] = useState(true);
 

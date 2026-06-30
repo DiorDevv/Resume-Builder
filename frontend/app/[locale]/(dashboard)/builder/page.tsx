@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Check, FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { SortableSection } from "@/components/builder/sortable-section";
 import { ErrorBoundary } from "@/components/builder/error-boundary";
 import { PersonalInfoForm, WorkExperienceForm, EducationForm, SkillsForm, ProjectsForm, CertificationsForm, LanguagesForm } from "@/components/builder/section-forms";
@@ -135,6 +136,8 @@ function ResumeSelector({ resumes, activeId, onSelect, onCreate }: ResumeSelecto
 
 export default function BuilderPage() {
   const t = useTranslations("builder");
+  const searchParams = useSearchParams();
+  const defaultTemplate = searchParams.get("template") || undefined;
   const [resumeList, setResumeList] = useState<ResumeSummary[]>([]);
   const [resumeId, setResumeId] = useState<string | null>(null);
   const [sections, setSections] = useState<SectionData[]>([]);
@@ -154,8 +157,8 @@ export default function BuilderPage() {
       const resume = await apiFetch<{ id: string; sections: SectionData[] }>(`/api/v1/resumes/${rid}`);
       let existingSections = resume.sections || [];
 
-      for (const st of DEFAULT_SECTIONS) {
-        if (!existingSections.some((s) => s.section_type === st)) {
+      if (existingSections.length === 0) {
+        for (const st of DEFAULT_SECTIONS) {
           const created = await apiFetch<SectionData>(
             `/api/v1/resumes/${rid}/sections`,
             { method: "POST", body: JSON.stringify({ section_type: st, sort_order: DEFAULT_SECTIONS.indexOf(st), data: getDefaultData(st) }) }
@@ -351,7 +354,7 @@ export default function BuilderPage() {
           )}
         </AnimatePresence>
 
-        <div className="w-full lg:w-1/2 overflow-y-auto border-r border-border/50 p-4 lg:p-6">
+        <div className="w-full lg:w-1/2 overflow-y-auto border-r border-border/50 p-4 lg:p-6 max-h-[50vh] lg:max-h-none">
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <ResumeSelector
@@ -442,7 +445,7 @@ export default function BuilderPage() {
 
         <div className="w-full lg:w-1/2 overflow-y-auto bg-primary/30 p-4 lg:p-6">
           <div className="sticky top-0">
-            <ResumePreview data={previewData} />
+            <ResumePreview data={previewData} defaultTemplate={defaultTemplate as "classic" | "modern" | "minimal" | undefined} />
           </div>
         </div>
       </div>
